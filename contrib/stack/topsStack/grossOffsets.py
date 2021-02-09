@@ -11,7 +11,8 @@ import isceobj
 from iscesys.Component.ProductManager import ProductManager as PM
 import numpy as np
 from netCDF4 import Dataset
-import gdal
+#from mpl_toolkits.basemap import Basemap
+from osgeo import gdal
 
 from scipy.interpolate import interp2d, griddata
 

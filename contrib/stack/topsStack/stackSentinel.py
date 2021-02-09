@@ -11,12 +11,6 @@ import datetime
 import time
 import numpy as np
 
-# suppress matplotlib DEBUG message
-from matplotlib.path import Path as Path
-import logging
-mpl_logger = logging.getLogger('matplotlib')
-mpl_logger.setLevel(logging.WARNING)
-
 import isce
 import isceobj
 from isceobj.Sensor.TOPS.Sentinel1 import Sentinel1
@@ -94,81 +88,89 @@ def createParser():
     parser = argparse.ArgumentParser( description='Preparing the directory structure and config files for stack processing of Sentinel data')
 
     parser.add_argument('-H','--hh', nargs=0, action=customArgparseAction,
-                help='Display detailed help information.')
+                        help='Display detailed help information.')
 
     parser.add_argument('-s', '--slc_directory', dest='slc_dirname', type=str, required=True,
-            help='Directory with all Sentinel SLCs')
+                        help='Directory with all Sentinel SLCs')
 
     parser.add_argument('-o', '--orbit_directory', dest='orbit_dirname', type=str, required=True,
-            help='Directory with all orbits')
+                        help='Directory with all orbits')
 
     parser.add_argument('-a', '--aux_directory', dest='aux_dirname', type=str, required=True,
-            help='Directory with all aux files')
+                        help='Directory with all aux files')
 
     parser.add_argument('-w', '--working_directory', dest='work_dir', type=str, default='./',
-            help='Working directory ')
+                        help='Working directory (default: %(default)s).')
 
     parser.add_argument('-d', '--dem', dest='dem', type=str, required=True,
-            help='Directory with the DEM')
+                        help='Directory with the DEM')
 
-    parser.add_argument('-m', '--master_date', dest='master_date', type=str, default=None,
-            help='Directory with master acquisition')
+    parser.add_argument('-m', '--reference_date', dest='reference_date', type=str, default=None,
+                        help='Directory with reference acquisition')
 
     parser.add_argument('-c','--num_connections', dest='num_connections', type=str, default = '1',
-            help='number of interferograms between each date and subsequent dates. -- Default : 1')
-
-    parser.add_argument('-O','--num_overlap_connections', dest='num_overlap_connections', type=str, default = '3',
-                help='number of overlap interferograms between each date and subsequent dates used for NESD computation (for azimuth offsets misregistration). -- Default : 3')
+                        help='number of interferograms between each date and subsequent dates (default: %(default)s).')
 
     parser.add_argument('-n', '--swath_num', dest='swath_num', type=str, default='1 2 3',
-            help="A list of swaths to be processed. -- Default : '1 2 3'")
+                        help="A list of swaths to be processed. -- Default : '1 2 3'")
 
-    parser.add_argument('-b', '--bbox', dest='bbox', type=str, default=None, help="Lat/Lon Bounding SNWE. -- Example : '19 20 -99.5 -98.5' -- Default : common overlap between stack")
+    parser.add_argument('-b', '--bbox', dest='bbox', type=str, default=None,
+                        help="Lat/Lon Bounding SNWE. -- Example : '19 20 -99.5 -98.5' -- Default : common overlap between stack")
 
-    parser.add_argument('-t', '--text_cmd', dest='text_cmd', type=str, default=''
-       , help="text command to be added to the beginning of each line of the run files. -- Example : 'source ~/.bash_profile;' -- Default : ''")
+    parser.add_argument('-t', '--text_cmd', dest='text_cmd', type=str, default='', 
+                        help="text command to be added to the beginning of each line of the run files (default: '%(default)s'). "
+                             "Example : 'source ~/.bash_profile;'")
 
-    parser.add_argument('-x', '--exclude_dates', dest='exclude_dates', type=str, default=None
-       , help="List of the dates to be excluded for processing. -- Example : '20141007,20141031' -- Default: No dates excluded")
+    parser.add_argument('-x', '--exclude_dates', dest='exclude_dates', type=str, default=None, 
+                        help="List of the dates to be excluded for processing. -- Example : '20141007,20141031' (default: %(default)s).")
 
-    parser.add_argument('-i', '--include_dates', dest='include_dates', type=str, default=None
-       , help="List of the dates to be included for processing. -- Example : '20141007,20141031' -- Default: No dates excluded")
+    parser.add_argument('-i', '--include_dates', dest='include_dates', type=str, default=None, 
+                        help="List of the dates to be included for processing. -- Example : '20141007,20141031' (default: %(default)s).")
 
-    parser.add_argument('-z', '--azimuth_looks', dest='azimuthLooks', type=str, default='3'
-       , help='Number of looks in azimuth for interferogram multi-looking. -- Default : 3')
+    parser.add_argument('--start_date', dest='startDate', type=str, default=None, 
+                        help='Start date for stack processing. Acquisitions before start date are ignored. '
+                             'format should be YYYY-MM-DD e.g., 2015-01-23')
 
-    parser.add_argument('-r', '--range_looks', dest='rangeLooks', type=str, default='9'
-       , help='Number of looks in range for interferogram multi-looking. -- Default : 9')
+    parser.add_argument('--stop_date', dest='stopDate', type=str, default=None, 
+                        help='Stop date for stack processing. Acquisitions after stop date are ignored. '
+                             'format should be YYYY-MM-DD e.g., 2017-02-26')
 
-    parser.add_argument('-f', '--filter_strength', dest='filtStrength', type=str, default='0.5'
-       , help='Filter strength for interferogram filtering. -- Default : 0.5')
+    parser.add_argument('-z', '--azimuth_looks', dest='azimuthLooks', type=str, default='3', 
+                        help='Number of looks in azimuth for interferogram multi-looking (default: %(default)s).')
 
-    parser.add_argument('-e', '--esd_coherence_threshold', dest='esdCoherenceThreshold', type=str, default='0.85'
-           , help='Coherence threshold for estimating azimuth misregistration using enhanced spectral diversity. -- Default : 0.85')
+    parser.add_argument('-r', '--range_looks', dest='rangeLooks', type=str, default='9', 
+                        help='Number of looks in range for interferogram multi-looking (default: %(default)s).')
 
-    parser.add_argument('--snr_misreg_threshold', dest='snrThreshold', type=str, default='10'
-               , help='SNR threshold for estimating range misregistration using cross correlation. -- Default : 10')
+    parser.add_argument('-f', '--filter_strength', dest='filtStrength', type=str, default='0.5', 
+                        help='Filter strength for interferogram filtering (default: %(default)s).')
 
-    parser.add_argument('-u', '--unw_method', dest='unwMethod', type=str, default='snaphu'
-       , help='Unwrapping method (icu or snaphu). -- Default : snaphu')
+    parser.add_argument('--snr_misreg_threshold', dest='snrThreshold', type=str, default='10', 
+                        help='SNR threshold for estimating range misregistration using cross correlation (default: %(default)s).')
 
-    parser.add_argument('-p', '--polarization', dest='polarization', type=str, default='vv'
-       , help='SAR data polarization -- Default : vv')
+    parser.add_argument('-p', '--polarization', dest='polarization', type=str, default='vv', 
+                        help='SAR data polarization (default: %(default)s).')
 
-    parser.add_argument('-C', '--coregistration', dest='coregistration', type=str, default='NESD'
-           , help='Coregistration options: a) geometry b) NESD -- Default : NESD')
+    parser.add_argument('-C', '--coregistration', dest='coregistration', type=str, default='NESD', choices=['geometry', 'NESD'],
+                        help='Coregistration options (default: %(default)s).')
 
-    parser.add_argument('-W', '--workflow', dest='workflow', type=str, default='interferogram'
-       , help='The InSAR processing workflow : (interferogram, offset, slc, correlation) -- Default : interferogram')
+    parser.add_argument('-O','--num_overlap_connections', dest='num_overlap_connections', type=str, default = '3',
+                        help='number of overlap interferograms between each date and subsequent dates used for NESD computation '
+                             '(for azimuth offsets misregistration) (default: %(default)s).')
 
-    parser.add_argument('--start_date', dest='startDate', type=str, default=None
-       , help='Start date for stack processing. Acquisitions before start date are ignored. format should be YYYY-MM-DD e.g., 2015-01-23')
+    parser.add_argument('-e', '--esd_coherence_threshold', dest='esdCoherenceThreshold', type=str, default='0.85', 
+                        help='Coherence threshold for estimating azimuth misregistration using enhanced spectral diversity (default: %(default)s).')
 
-    parser.add_argument('--stop_date', dest='stopDate', type=str, default=None
-       , help='Stop date for stack processing. Acquisitions after stop date are ignored. format should be YYYY-MM-DD e.g., 2017-02-26')
+    parser.add_argument('-W', '--workflow', dest='workflow', type=str, default='interferogram', choices=['slc', 'correlation', 'interferogram', 'offset'],
+                        help='The InSAR processing workflow (default: %(default)s).')
 
     parser.add_argument('-useGPU', '--useGPU', dest='useGPU',action='store_true', default=False,
-        help='Allow App to use GPU when available')
+                        help='Allow App to use GPU when available')
+
+    parser.add_argument('--num-proc', '--num-process', dest='numProcess', type=int, default=1,
+                        help='number of parallel processes (where applicable) (default: %(default)s).')
+
+    parser.add_argument('-u', '--unw_method', dest='unwMethod', type=str, default='snaphu', choices=['icu', 'snaphu'],
+                        help='Unwrapping method (default: %(default)s).')
 
     parser.add_argument('-rmFilter', '--rmFilter', dest='rmFilter', action='store_true', default=False,
                         help='Make an extra unwrap file in which filtering effect is removed')
@@ -187,6 +189,17 @@ def cmdLineParse(iargs = None):
 
     return inps
 
+
+def generate_geopolygon(bbox):
+    """generate shapely Polygon"""
+    from shapely.geometry import Point, Polygon
+    
+    # convert pnts to shapely polygon format
+    # the order of pnts is conter-clockwise, starting from the lower ldft corner
+    # the order for Point is lon,lat
+    points = [Point(bbox[i][0], bbox[i][1]) for i in range(4)]
+
+    return Polygon([(p.coords.xy[0][0], p.coords.xy[1][0]) for p in points])
 
 ####################################
 def get_dates(inps):
@@ -229,7 +242,7 @@ def get_dates(inps):
     if inps.startDate is not None:
         stackStartDate = datetime.datetime(*time.strptime(inps.startDate, "%Y-%m-%d")[0:6])
     else:
-        #if startDate is None let's fix it to first JPL's staellite lunch date :)
+        #if startDate is None let's fix it to first JPL's satellite lunch date :)
         stackStartDate = datetime.datetime(*time.strptime("1958-01-31", "%Y-%m-%d")[0:6])
 
     if inps.stopDate is not None:
@@ -243,7 +256,8 @@ def get_dates(inps):
     f = open('SAFE_files.txt','w')
     safe_count=0
     safe_dict={}
-    bbox_poly = [[bbox[0],bbox[2]],[bbox[0],bbox[3]],[bbox[1],bbox[3]],[bbox[1],bbox[2]]]
+    bbox_poly = np.array([[bbox[2],bbox[0]],[bbox[3],bbox[0]],[bbox[3],bbox[1]],[bbox[2],bbox[1]]])
+
     for safe in SAFE_files:
         safeObj=sentinelSLC(safe)
         safeObj.get_dates()
@@ -260,45 +274,22 @@ def get_dates(inps):
             reject_SAFE=True
             pnts = safeObj.getkmlQUAD(safe)
 
-            # looping over the corners, keep the SAF is one of the corners is within the BBOX
-            lats = []
-            lons = []
+            # process pnts to use generate_geopolygon function
+            pnts_bbox = np.empty((4,2))
+            count = 0
             for pnt in pnts:
-                lon = float(pnt.split(',')[0])
-                lat = float(pnt.split(',')[1])
+                pnts_bbox[count, 0] = float(pnt.split(',')[0]) # longitude
+                pnts_bbox[count, 1] = float(pnt.split(',')[1]) # latitude
+                count += 1
+            pnts_polygon = generate_geopolygon(pnts_bbox)
+            bbox_polygon = generate_geopolygon(bbox_poly)
 
-                # keep track of all the corners to see of the product is larger than the bbox
-                lats.append(lat)
-                lons.append(lon)
-
-
-
-
-#                bbox = SNWE
-#                polygon = bbox[0] bbox[2]       SW
-#                          bbox[0] bbox[3]       SE
-#                          bbox[1] bbox[3]       NE
-#                          bbox[1] bbox[2]       NW
-
-                poly = Path(bbox_poly)
-                point = (lat,lon)
-                in_bbox = poly.contains_point(point)
-
-
-                # product corner falls within BBOX (SNWE)
-                if in_bbox:
-                    reject_SAFE=False
-
-
-            # If the product is till being rejected, check if the BBOX corners fall within the frame
-            if reject_SAFE:
-                for point in bbox_poly:
-                    frame = [[a,b] for a,b in zip(lats,lons)]
-                    poly = Path(frame)
-                    in_frame = poly.contains_point(point)
-                    if in_frame:
-                        reject_SAFE=False
-
+            # judge whether these two polygon intersect with each other
+            overlap_flag = pnts_polygon.intersects(bbox_polygon)
+            if overlap_flag:
+                reject_SAFE = False
+            else:
+                reject_SAFE = True
 
         if not reject_SAFE:
             if safeObj.date  not in safe_dict.keys() and safeObj.date  not in excludeList:
@@ -395,26 +386,26 @@ def get_dates(inps):
         print(dateListframeGAP)
         print("")
 
-    if inps.master_date is None:
+    if inps.reference_date is None:
         if len(dateList)<1:
             print('*************************************')
             print('Error:')
             print('No acquisition forfills the temporal range and bbox requirement.')
             sys.exit(1)
-        inps.master_date = dateList[0]
-        print ("The master date was not chosen. The first date is considered as master date.")
+        inps.reference_date = dateList[0]
+        print ("The reference date was not chosen. The first date is considered as reference date.")
 
     print ("")
-    print ("All SLCs will be coregistered to : " + inps.master_date)
+    print ("All SLCs will be coregistered to : " + inps.reference_date)
 
-    slaveList = [key for key in safe_dict.keys()]
-    slaveList.sort()
-    slaveList.remove(inps.master_date)
-    print ("slave dates :")
-    print (slaveList)
+    secondaryList = [key for key in safe_dict.keys()]
+    secondaryList.sort()
+    secondaryList.remove(inps.reference_date)
+    print ("secondary dates :")
+    print (secondaryList)
     print ("")
 
-    return dateList, inps.master_date, slaveList, safe_dict
+    return dateList, inps.reference_date, secondaryList, safe_dict
 
 def selectNeighborPairs(dateList, num_connections, updateStack=False):  # should be changed to able to account for the existed aquisitions -- Minyan Zhong
 
@@ -436,27 +427,27 @@ def selectNeighborPairs(dateList, num_connections, updateStack=False):  # should
 ########################################
 # Below are few workflow examples.
 
-def slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, updateStack, mergeSLC=False):
+def slcStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, updateStack, mergeSLC=False):
     #############################
     i=0
 
     if not updateStack:
         i += 1
         runObj = run()
-        runObj.configure(inps, 'run_{:02d}_unpack_topo_master'.format(i))
-        runObj.unpackStackMasterSLC(safe_dict)
+        runObj.configure(inps, 'run_{:02d}_unpack_topo_reference'.format(i))
+        runObj.unpackStackReferenceSLC(safe_dict)
         runObj.finalize()
 
     i+=1
     runObj = run()
-    runObj.configure(inps, 'run_{:02d}_unpack_slave_slc'.format(i))
-    runObj.unpackSlavesSLC(stackMasterDate, slaveDates, safe_dict)
+    runObj.configure(inps, 'run_{:02d}_unpack_secondary_slc'.format(i))
+    runObj.unpackSecondarysSLC(stackReferenceDate, secondaryDates, safe_dict)
     runObj.finalize()
 
     i+=1
     runObj = run()
     runObj.configure(inps, 'run_{:02d}_average_baseline'.format(i))
-    runObj.averageBaseline(stackMasterDate, slaveDates)
+    runObj.averageBaseline(stackReferenceDate, secondaryDates)
     runObj.finalize()
 
     if inps.coregistration in ['NESD', 'nesd']:
@@ -470,20 +461,20 @@ def slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, upd
         i += 1
         runObj = run()
         runObj.configure(inps, 'run_{:02d}_overlap_geo2rdr'.format(i))
-        runObj.geo2rdr_offset(slaveDates)
+        runObj.geo2rdr_offset(secondaryDates)
         runObj.finalize()
 
         i += 1
         runObj = run()
         runObj.configure(inps, 'run_{:02d}_overlap_resample'.format(i))
-        runObj.resample_with_carrier(slaveDates)
+        runObj.resample_with_carrier(secondaryDates)
         runObj.finalize()
 
         i+=1
         runObj = run()
         runObj.configure(inps, 'run_{:02d}_pairs_misreg'.format(i))
         if updateStack:
-            runObj.pairs_misregistration(slaveDates, safe_dict)
+            runObj.pairs_misregistration(secondaryDates, safe_dict)
         else:
             runObj.pairs_misregistration(acquisitionDates, safe_dict)
         runObj.finalize()
@@ -497,13 +488,13 @@ def slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, upd
     i += 1
     runObj = run()
     runObj.configure(inps, 'run_{:02d}_fullBurst_geo2rdr'.format(i))
-    runObj.geo2rdr_offset(slaveDates, fullBurst='True')
+    runObj.geo2rdr_offset(secondaryDates, fullBurst='True')
     runObj.finalize()
 
     i += 1
     runObj = run()
     runObj.configure(inps, 'run_{:02d}_fullBurst_resample'.format(i))
-    runObj.resample_with_carrier(slaveDates, fullBurst='True')
+    runObj.resample_with_carrier(secondaryDates, fullBurst='True')
     runObj.finalize()
 
     i+=1
@@ -515,31 +506,31 @@ def slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, upd
     if mergeSLC:
         i+=1
         runObj = run()
-        runObj.configure(inps, 'run_{:02d}_merge'.format(i))
-        runObj.mergeMaster(stackMasterDate, virtual = 'False')
-        runObj.mergeSlaveSLC(slaveDates, virtual = 'False')
+        runObj.configure(inps, 'run_{:02d}_merge_reference_secondary_slc'.format(i))
+        runObj.mergeReference(stackReferenceDate, virtual = 'False')
+        runObj.mergeSecondarySLC(secondaryDates, virtual = 'False')
         runObj.finalize()
 
         i+=1
         runObj = run()
         runObj.configure(inps, 'run_{:02d}_grid_baseline'.format(i))
-        runObj.gridBaseline(stackMasterDate, slaveDates)
+        runObj.gridBaseline(stackReferenceDate, secondaryDates)
         runObj.finalize()
 
 
     return i
 
-def correlationStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack):
+def correlationStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack):
 
     #############################
-    i = slcStack(inps, acquisitionDates,stackMasterDate, slaveDates, safe_dict, updateStack)
+    i = slcStack(inps, acquisitionDates,stackReferenceDate, secondaryDates, safe_dict, updateStack)
 
 
     i+=1
     runObj = run()
-    runObj.configure(inps, 'run_{:02d}_merge_master_slave_slc'.format(i))
-    runObj.mergeMaster(stackMasterDate, virtual = 'True')
-    runObj.mergeSlaveSLC(slaveDates, virtual = 'True')
+    runObj.configure(inps, 'run_{:02d}_merge_reference_secondary_slc'.format(i))
+    runObj.mergeReference(stackReferenceDate, virtual = 'True')
+    runObj.mergeSecondarySLC(secondaryDates, virtual = 'True')
     runObj.finalize()
 
     i+=1
@@ -555,15 +546,15 @@ def correlationStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_d
     runObj.finalize()
 
 
-def interferogramStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack):
+def interferogramStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack):
 
-    i = slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, updateStack)
+    i = slcStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, updateStack)
 
     i+=1
     runObj = run()
-    runObj.configure(inps, 'run_{:02d}_merge_master_slave_slc'.format(i))
-    runObj.mergeMaster(stackMasterDate, virtual = 'True')
-    runObj.mergeSlaveSLC(slaveDates, virtual = 'True')
+    runObj.configure(inps, 'run_{:02d}_merge_reference_secondary_slc'.format(i))
+    runObj.mergeReference(stackReferenceDate, virtual = 'True')
+    runObj.mergeSecondarySLC(secondaryDates, virtual = 'True')
     runObj.finalize()
 
     i+=1
@@ -591,15 +582,15 @@ def interferogramStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe
     runObj.finalize()
 
 
-def offsetStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack):
+def offsetStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack):
 
-    i = slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, updateStack)
+    i = slcStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, updateStack)
 
     i+=1
     runObj = run()
-    runObj.configure(inps, 'run_{:02d}_merge_master_slave_slc'.format(i))
-    runObj.mergeMaster(stackMasterDate, virtual = 'False')
-    runObj.mergeSlaveSLC(slaveDates, virtual = 'False')
+    runObj.configure(inps, 'run_{:02d}_merge_reference_secondary_slc'.format(i))
+    runObj.mergeReference(stackReferenceDate, virtual = 'False')
+    runObj.mergeSecondarySLC(secondaryDates, virtual = 'False')
     runObj.finalize()
 
     i+=1
@@ -610,12 +601,12 @@ def offsetStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, 
 
 
 def checkCurrentStatus(inps):
-    acquisitionDates, stackMasterDate, slaveDates, safe_dict = get_dates(inps)
-    coregSLCDir = os.path.join(inps.work_dir, 'coreg_slaves')
+    acquisitionDates, stackReferenceDate, secondaryDates, safe_dict = get_dates(inps)
+    coregSLCDir = os.path.join(inps.work_dir, 'coreg_secondarys')
     stackUpdate = False
     if os.path.exists(coregSLCDir):
-        coregSlaves = glob.glob(os.path.join(coregSLCDir, '[0-9]???[0-9]?[0-9]?'))
-        coregSLC = [os.path.basename(slv) for slv in coregSlaves]
+        coregSecondarys = glob.glob(os.path.join(coregSLCDir, '[0-9]???[0-9]?[0-9]?'))
+        coregSLC = [os.path.basename(slv) for slv in coregSecondarys]
         coregSLC.sort()
         if len(coregSLC)>0:
             print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
@@ -628,7 +619,7 @@ def checkCurrentStatus(inps):
         else:
             pass
 
-        newAcquisitions = list(set(slaveDates).difference(set(coregSLC)))
+        newAcquisitions = list(set(secondaryDates).difference(set(coregSLC)))
         newAcquisitions.sort()
         if len(newAcquisitions)>0:
             print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
@@ -654,32 +645,32 @@ def checkCurrentStatus(inps):
         if inps.coregistration in ['NESD','nesd']:
 
             numSLCReprocess = 2*int(inps.num_overlap_connections)
-            if numSLCReprocess > len(slaveDates):
-                numSLCReprocess = len(slaveDates)
+            if numSLCReprocess > len(secondaryDates):
+                numSLCReprocess = len(secondaryDates)
 
             latestCoregSLCs =  coregSLC[-1*numSLCReprocess:]
-            latestCoregSLCs_original = list(set(slaveDates).intersection(set(latestCoregSLCs)))
+            latestCoregSLCs_original = list(set(secondaryDates).intersection(set(latestCoregSLCs)))
             if len(latestCoregSLCs_original) < numSLCReprocess:
                 raise Exception('The original SAFE files for latest {0} coregistered SLCs is needed'.format(numSLCReprocess))
 
         else:  # add by Minyan Zhong, should be changed later as numSLCReprocess should be 0
 
             numSLCReprocess = int(inps.num_connections)
-            if numSLCReprocess > len(slaveDates):
-                numSLCReprocess = len(slaveDates)
+            if numSLCReprocess > len(secondaryDates):
+                numSLCReprocess = len(secondaryDates)
 
             latestCoregSLCs =  coregSLC[-1*numSLCReprocess:]
-            latestCoregSLCs_original = list(set(slaveDates).intersection(set(latestCoregSLCs)))
+            latestCoregSLCs_original = list(set(secondaryDates).intersection(set(latestCoregSLCs)))
             if len(latestCoregSLCs_original) < numSLCReprocess:
                 raise Exception('The original SAFE files for latest {0} coregistered SLCs is needed'.format(numSLCReprocess))
 
         print ('Last {0} coregistred SLCs to be updated: '.format(numSLCReprocess), latestCoregSLCs)
 
-        slaveDates = latestCoregSLCs + newAcquisitions
-        slaveDates.sort()
+        secondaryDates = latestCoregSLCs + newAcquisitions
+        secondaryDates.sort()
 
-        acquisitionDates = slaveDates.copy()
-        acquisitionDates.append(stackMasterDate)
+        acquisitionDates = secondaryDates.copy()
+        acquisitionDates.append(stackReferenceDate)
         acquisitionDates.sort()
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         print('')
@@ -689,15 +680,15 @@ def checkCurrentStatus(inps):
         print('')
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         print('')
-        print('stack master:')
+        print('stack reference:')
         print('')
-        print(stackMasterDate)
+        print(stackReferenceDate)
         print('')
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         print('')
-        print('slave acquisitions to be processed: ')
+        print('secondary acquisitions to be processed: ')
         print('')
-        print(slaveDates)
+        print(secondaryDates)
         print('')
         print('%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%')
         safe_dict_new={}
@@ -708,7 +699,7 @@ def checkCurrentStatus(inps):
     else:
         print('No existing stack was identified. A new stack will be generated.')
 
-    return acquisitionDates, stackMasterDate, slaveDates, safe_dict, stackUpdate
+    return acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, stackUpdate
 
 def main(iargs=None):
 
@@ -734,7 +725,7 @@ def main(iargs=None):
         print('')
         sys.exit(1)
 
-    acquisitionDates, stackMasterDate, slaveDates, safe_dict, updateStack = checkCurrentStatus(inps)
+    acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, updateStack = checkCurrentStatus(inps)
 
 
 
@@ -742,7 +733,8 @@ def main(iargs=None):
         print('')
         print('Updating an existing stack ...')
         print('')
-        pairs = selectNeighborPairs(slaveDates, inps.num_connections,updateStack)   # will be change later
+        dates4NewPairs = sorted(secondaryDates + [stackReferenceDate])[1:]
+        pairs = selectNeighborPairs(dates4NewPairs, inps.num_connections,updateStack)   # will be change later
     else:
         pairs = selectNeighborPairs(acquisitionDates, inps.num_connections,updateStack)
 
@@ -753,19 +745,19 @@ def main(iargs=None):
     print ('*****************************************')
     if inps.workflow == 'interferogram':
 
-        interferogramStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack)
+        interferogramStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack)
 
     elif inps.workflow == 'offset':
 
-        offsetStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack)
+        offsetStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack)
 
     elif inps.workflow == 'correlation':
 
-        correlationStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, pairs, updateStack)
+        correlationStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, pairs, updateStack)
 
     elif inps.workflow == 'slc':
 
-        slcStack(inps, acquisitionDates, stackMasterDate, slaveDates, safe_dict, updateStack, mergeSLC=True)
+        slcStack(inps, acquisitionDates, stackReferenceDate, secondaryDates, safe_dict, updateStack, mergeSLC=True)
 
 if __name__ == "__main__":
 

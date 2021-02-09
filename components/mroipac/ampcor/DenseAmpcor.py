@@ -311,15 +311,21 @@ class DenseAmpcor(Component):
 
     @use_api
     def denseampcor(self,slcImage1 = None,slcImage2 = None):
+
+        # Fix for changes in Python 3.8
+        if (sys.version_info.major == 3) and \
+                (sys.version_info.minor >= 8):
+            mp.set_start_method("fork")
+
         if not (slcImage1 == None):
             self.slcImage1 = slcImage1
         if (self.slcImage1 == None):
-            logger.error("Error. master slc image not set.")
+            logger.error("Error. reference slc image not set.")
             raise Exception
         if not (slcImage2 == None):
             self.slcImage2 = slcImage2
         if (self.slcImage2 == None):
-            logger.error("Error. slave slc image not set.")
+            logger.error("Error. secondary slc image not set.")
             raise Exception
       
         self.fileLength1 = self.slcImage1.getLength()
@@ -700,11 +706,11 @@ class DenseAmpcor(Component):
         self.rangeSpacing2 = float(var)
 
     
-    def setMasterSlcImage(self,im):
+    def setReferenceSlcImage(self,im):
         self.slcImage1 = im
         return
     
-    def setSlaveSlcImage(self,im):
+    def setSecondarySlcImage(self,im):
         self.slcImage2 = im
         return
 

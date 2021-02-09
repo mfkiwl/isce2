@@ -7,7 +7,7 @@ import argparse
 import isce
 import isceobj
 import os
-import gdal
+from osgeo import gdal
 import xml.etree.ElementTree as ET
 
 def createParser():
@@ -84,7 +84,7 @@ def prepare_lat_lon(inps):
 
     return tempLat, tempLon
 
-    # gdal_translate -of VRT -srcwin  384 384 64889 12785 -outsize 1013 199 ../../COMBINED/GEOM_MASTER/LAT.rdr LAT_off.vrt
+    # gdal_translate -of VRT -srcwin  384 384 64889 12785 -outsize 1013 199 ../../COMBINED/GEOM_REFERENCE/LAT.rdr LAT_off.vrt
     
 
 def writeVRT(infile, latFile, lonFile):

@@ -16,7 +16,7 @@ import time
 #import matplotlib.pyplot as plt
 from contrib.splitSpectrum import SplitRangeSpectrum as splitSpectrum
 from isceobj.Constants import SPEED_OF_LIGHT
-import gdal
+from osgeo import gdal
 
 
 def createParser():
@@ -80,7 +80,7 @@ def main(iargs=None):
     '''
     Split the range spectrum
     '''
-    #Check if the master and slave are .slc files then go ahead and split the range spectrum
+    #Check if the reference and secondary are .slc files then go ahead and split the range spectrum
     tstart = time.time()
     inps = cmdLineParse(iargs)
     print ('input full-band SLC: ', inps.slc)

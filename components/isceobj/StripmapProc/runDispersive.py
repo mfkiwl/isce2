@@ -3,7 +3,8 @@
 #
 #
 import logging
-import os,gdal
+import os
+from osgeo import gdal
 import isceobj
 from isceobj.Constants import SPEED_OF_LIGHT
 import numpy as np
@@ -426,9 +427,9 @@ def runDispersive(self):
 
     maskFile = os.path.join(outputDir, "mask.bil")
 
-    masterFrame = self._insar.loadProduct( self._insar.masterSlcCropProduct)
+    referenceFrame = self._insar.loadProduct( self._insar.referenceSlcCropProduct)
 
-    wvl = masterFrame.radarWavelegth
+    wvl = referenceFrame.radarWavelegth
     wvlL = self.insar.lowBandRadarWavelength
     wvlH = self.insar.highBandRadarWavelength
 
@@ -437,15 +438,15 @@ def runDispersive(self):
     fL = SPEED_OF_LIGHT/wvlL
     fH = SPEED_OF_LIGHT/wvlH
 
-    pulseLength = masterFrame.instrument.pulseLength
-    chirpSlope = masterFrame.instrument.chirpSlope
+    pulseLength = referenceFrame.instrument.pulseLength
+    chirpSlope = referenceFrame.instrument.chirpSlope
    
     # Total Bandwidth
     B = np.abs(chirpSlope)*pulseLength
     
     
     ###Determine looks
-    azLooks, rgLooks = self.insar.numberOfLooks( masterFrame, self.posting,
+    azLooks, rgLooks = self.insar.numberOfLooks( referenceFrame, self.posting,
                                         self.numberAzimuthLooks, self.numberRangeLooks)
 
     # estimating the dispersive and non-dispersive components
